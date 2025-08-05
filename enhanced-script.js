@@ -7,7 +7,7 @@ class EnhancedDesignComparator {
   constructor() {
     // Core properties
     this.currentMode = "image";
-    this.comparisonMode = "sideBySide";
+    this.comparisonMode = "diff";
     this.dataA = null;
     this.dataB = null;
 
@@ -411,32 +411,209 @@ class EnhancedDesignComparator {
     compareBtn.innerHTML = '<span class="loading"></span>Analyzing...';
     compareBtn.disabled = true;
 
+    console.log("Starting comparison process...");
+
     try {
+      // Create a timeout promise (reduced to 15 seconds)
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(
+          () => reject(new Error("Analysis timed out after 15 seconds")),
+          15000
+        )
+      );
+
+      let comparisonPromise;
+
       // Perform analysis based on data type
       switch (this.currentMode) {
         case "image":
-          await this.performImageComparison();
+          comparisonPromise = this.performImageComparisonFast();
           break;
         case "css":
-          await this.performCSSComparison();
+          comparisonPromise = this.performCSSComparison();
           break;
         case "html":
-          await this.performHTMLComparison();
+          comparisonPromise = this.performHTMLComparison();
           break;
         case "url":
-          await this.performWebsiteComparison();
+          comparisonPromise = this.performWebsiteComparison();
           break;
+        default:
+          throw new Error("Unknown comparison mode: " + this.currentMode);
       }
+
+      // Race between comparison and timeout
+      await Promise.race([comparisonPromise, timeoutPromise]);
+
+      console.log("Comparison completed successfully");
 
       // Show comparison section
       this.showComparisonResults();
     } catch (error) {
       console.error("Comparison failed:", error);
-      this.showError("Comparison failed. Please try again.");
+      this.showError("Comparison failed: " + error.message);
     } finally {
+      console.log("Resetting button state...");
       compareBtn.textContent = originalText;
       compareBtn.disabled = false;
     }
+  }
+
+  async performImageComparisonFast() {
+    try {
+      console.log("Starting fast image comparison...");
+
+      // Initialize canvases if not already done
+      this.initializeCanvases();
+
+      // Setup canvases for image comparison
+      if (!this.setupImageCanvases()) {
+        throw new Error("Failed to setup canvases");
+      }
+
+      // Skip OCR for fast comparison
+      console.log("Skipping OCR for speed...");
+
+      // Perform basic visual analysis only
+      await this.performBasicVisualAnalysis();
+
+      // Generate basic results
+      this.generateBasicResults();
+
+      console.log("Fast image comparison completed");
+      console.log("Final pixel difference:", this.pixelDifference);
+
+      // Ensure the diff view gets updated
+      if (this.comparisonMode === "diff") {
+        console.log("Updating diff stats after fast comparison...");
+        this.updateDiffStats();
+      }
+    } catch (error) {
+      console.error("Fast image comparison failed:", error);
+      // Create simple results for basic image comparison
+      this.createBasicImageResults();
+    }
+  }
+
+  async performBasicVisualAnalysis() {
+    console.log("Performing basic visual analysis...");
+
+    const canvas1 = document.getElementById("canvasA");
+    const canvas2 = document.getElementById("canvasB");
+    const diffCanvas = document.getElementById("canvasDiff");
+
+    if (!canvas1 || !canvas2 || !diffCanvas) {
+      console.error("Canvas elements not found");
+      console.log("Canvas1:", canvas1, "Canvas2:", canvas2, "DiffCanvas:", diffCanvas);
+      return;
+    }
+
+    const ctx1 = canvas1.getContext("2d");
+    const ctx2 = canvas2.getContext("2d");
+    const diffCtx = diffCanvas.getContext("2d");
+
+    if (!ctx1 || !ctx2 || !diffCtx) {
+      console.error("Cannot get canvas contexts");
+      return;
+    }
+
+    const width = canvas1.width;
+    const height = canvas1.height;
+
+    console.log("Canvas dimensions:", { width, height });
+
+    // Get image data (sample every 2nd pixel for speed)
+    const imageData1 = ctx1.getImageData(0, 0, width, height);
+    const imageData2 = ctx2.getImageData(0, 0, width, height);
+
+    // Create difference image
+    const diffImageData = diffCtx.createImageData(width, height);
+
+    let differentPixels = 0;
+    const step = 2; // Sample every 2nd pixel for speed
+    const threshold = 30; // Difference threshold
+
+    console.log("Starting pixel comparison...");
+
+    for (let i = 0; i < imageData1.data.length; i += 4 * step) {
+      const r1 = imageData1.data[i];
+      const g1 = imageData1.data[i + 1];
+      const b1 = imageData1.data[i + 2];
+
+      const r2 = imageData2.data[i];
+      const g2 = imageData2.data[i + 1];
+      const b2 = imageData2.data[i + 2];
+
+      const diff = Math.abs(r1 - r2) + Math.abs(g1 - g2) + Math.abs(b1 - b2);
+
+      if (diff > threshold) {
+        differentPixels++;
+        // Fill the pixel and the skipped ones with difference color
+        for (let j = 0; j < step && i + j * 4 < imageData1.data.length; j++) {
+          const idx = i + j * 4;
+          diffImageData.data[idx] = 255; // R (red for differences)
+          diffImageData.data[idx + 1] = 0; // G
+          diffImageData.data[idx + 2] = 0; // B
+          diffImageData.data[idx + 3] = 255; // A (fully opaque)
+        }
+      } else {
+        // Keep original pixels but make them slightly gray
+        const gray = (r1 + g1 + b1) / 3;
+        for (let j = 0; j < step && i + j * 4 < imageData1.data.length; j++) {
+          const idx = i + j * 4;
+          diffImageData.data[idx] = gray;
+          diffImageData.data[idx + 1] = gray;
+          diffImageData.data[idx + 2] = gray;
+          diffImageData.data[idx + 3] = 255; // A (fully opaque)
+        }
+      }
+    }
+
+    // Apply difference image to canvas
+    diffCtx.putImageData(diffImageData, 0, 0);
+
+    const totalSampledPixels = Math.floor(imageData1.data.length / (4 * step));
+    const percentage = (differentPixels / totalSampledPixels) * 100;
+
+    // Store results in the format expected by the rest of the application
+    this.pixelDifference = {
+      percentage: percentage,
+      differentPixels: differentPixels * step, // Estimate total different pixels
+      totalPixels: width * height,
+      samplingFactor: step,
+    };
+
+    console.log(
+      `Visual analysis complete: ${percentage.toFixed(2)}% difference`
+    );
+    console.log("Pixel difference result:", this.pixelDifference);
+  }
+
+  generateBasicResults() {
+    this.enhancedResults = {
+      type: "image",
+      visual: {
+        message: "Fast image comparison completed",
+        pixelDifference: this.pixelDifference || {
+          percentage: 0,
+          differentPixels: 0,
+          totalPixels: 0,
+        },
+      },
+      timestamp: new Date().toISOString(),
+    };
+
+    // Make sure canvases are properly assigned
+    this.canvasA = document.getElementById("canvasA");
+    this.canvasB = document.getElementById("canvasB");
+    this.canvasDiff = document.getElementById("canvasDiff");
+
+    console.log("Basic results generated:", this.enhancedResults);
+    console.log("Canvas assignments:", {
+      canvasA: this.canvasA,
+      canvasB: this.canvasB,
+      canvasDiff: this.canvasDiff,
+    });
   }
 
   async performImageComparison() {
@@ -977,21 +1154,53 @@ class EnhancedDesignComparator {
   async performVisualAnalysis() {
     if (this.currentMode !== "image") return;
 
-    // Generate pixel difference analysis
-    await this.generatePixelDifference();
+    console.log("Starting visual analysis...");
 
-    // Extract color palettes
-    this.colorAnalysis = {
-      paletteA: this.extractColorPalette(this.canvasA),
-      paletteB: this.extractColorPalette(this.canvasB),
-    };
+    try {
+      // Generate pixel difference analysis with timeout (reduced to 10 seconds)
+      const pixelDiffPromise = this.generatePixelDifference();
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(
+          () => reject(new Error("Pixel difference analysis timed out")),
+          10000
+        )
+      );
+
+      await Promise.race([pixelDiffPromise, timeoutPromise]);
+      console.log("Pixel difference analysis completed");
+
+      // Extract color palettes
+      console.log("Extracting color palettes...");
+      this.colorAnalysis = {
+        paletteA: this.extractColorPalette(this.canvasA),
+        paletteB: this.extractColorPalette(this.canvasB),
+      };
+      console.log("Color palette extraction completed");
+    } catch (error) {
+      console.error("Visual analysis failed:", error);
+      // Create fallback data
+      this.pixelDifference = {
+        error: "Visual analysis failed: " + error.message,
+        percentage: 0,
+        differentPixels: 0,
+        totalPixels: 0,
+      };
+      this.colorAnalysis = {
+        paletteA: [],
+        paletteB: [],
+      };
+    }
   }
 
   async generatePixelDifference() {
+    console.log("generatePixelDifference called");
+
     try {
       const ctxA = this.canvasA.getContext("2d");
       const ctxB = this.canvasB.getContext("2d");
       const ctxDiff = this.canvasDiff.getContext("2d");
+
+      console.log("Canvas contexts:", { ctxA, ctxB, ctxDiff });
 
       if (!ctxA || !ctxB || !ctxDiff) {
         console.error("Unable to get canvas contexts");
@@ -1001,11 +1210,20 @@ class EnhancedDesignComparator {
       const width = this.canvasA.width;
       const height = this.canvasA.height;
 
+      console.log("Canvas dimensions:", { width, height });
+
+      if (width === 0 || height === 0) {
+        console.error("Invalid canvas dimensions");
+        return;
+      }
+
       // For large images, sample pixels instead of processing every pixel
-      const maxPixels = 400000; // 400k pixels max for performance
+      const maxPixels = 200000; // Reduced for better performance
       const totalPixels = width * height;
       const skipFactor =
         totalPixels > maxPixels ? Math.ceil(totalPixels / maxPixels) : 1;
+
+      console.log("Processing settings:", { totalPixels, skipFactor });
 
       const imageDataA = ctxA.getImageData(0, 0, width, height);
       const imageDataB = ctxB.getImageData(0, 0, width, height);
@@ -1014,16 +1232,23 @@ class EnhancedDesignComparator {
       let differentPixels = 0;
       let sampledPixels = 0;
       const threshold = 30;
+      const maxSamples = Math.floor(imageDataA.data.length / (4 * skipFactor));
+
+      console.log("Starting pixel processing, max samples:", maxSamples);
 
       // Process pixels with optional skipping for performance
-      for (let i = 0; i < imageDataA.data.length; i += 4 * skipFactor) {
-        const rA = imageDataA.data[i];
-        const gA = imageDataA.data[i + 1];
-        const bA = imageDataA.data[i + 2];
+      for (
+        let i = 0;
+        i < imageDataA.data.length && sampledPixels < maxSamples;
+        i += 4 * skipFactor
+      ) {
+        const rA = imageDataA.data[i] || 0;
+        const gA = imageDataA.data[i + 1] || 0;
+        const bA = imageDataA.data[i + 2] || 0;
 
-        const rB = imageDataB.data[i];
-        const gB = imageDataB.data[i + 1];
-        const bB = imageDataB.data[i + 2];
+        const rB = imageDataB.data[i] || 0;
+        const gB = imageDataB.data[i + 1] || 0;
+        const bB = imageDataB.data[i + 2] || 0;
 
         const diff = Math.abs(rA - rB) + Math.abs(gA - gB) + Math.abs(bA - bB);
 
@@ -1058,11 +1283,16 @@ class EnhancedDesignComparator {
         }
         sampledPixels++;
 
-        // Yield control occasionally to prevent UI blocking
-        if (sampledPixels % 10000 === 0) {
-          await new Promise((resolve) => setTimeout(resolve, 0));
+        // Yield control less frequently to prevent hanging
+        if (sampledPixels % 5000 === 0) {
+          console.log(`Processed ${sampledPixels} samples...`);
+          await new Promise((resolve) => setTimeout(resolve, 1));
         }
       }
+
+      console.log(
+        `Pixel processing complete. Processed ${sampledPixels} samples, found ${differentPixels} different pixels`
+      );
 
       ctxDiff.putImageData(diffImageData, 0, 0);
 
@@ -1072,12 +1302,26 @@ class EnhancedDesignComparator {
         percentage: ((differentPixels * skipFactor) / totalPixels) * 100,
         samplingFactor: skipFactor,
       };
+
+      console.log("Pixel difference result:", this.pixelDifference);
+
+      // Update diff stats if we're in diff mode
+      if (this.comparisonMode === "diff") {
+        console.log("Calling updateDiffStats from generatePixelDifference");
+        this.updateDiffStats();
+      }
     } catch (error) {
       console.error("Error generating pixel difference:", error);
-      this.pixelDifference = { error: "Failed to analyze pixel differences" };
+      this.pixelDifference = {
+        error: "Failed to analyze pixel differences: " + error.message,
+      };
+
+      // Update diff stats to show error if we're in diff mode
+      if (this.comparisonMode === "diff") {
+        this.updateDiffStats();
+      }
     }
   }
-
   extractColorPalette(canvas) {
     try {
       const ctx = canvas.getContext("2d");
@@ -1212,6 +1456,8 @@ class EnhancedDesignComparator {
   }
 
   updateComparisonView() {
+    console.log("updateComparisonView called, mode:", this.comparisonMode);
+
     // Hide all views first
     const views = ["sideBySideView", "sliderView", "diffView"];
     views.forEach((viewId) => {
@@ -1228,11 +1474,90 @@ class EnhancedDesignComparator {
       };
 
       const viewId = viewMap[this.comparisonMode];
+      console.log("Showing view:", viewId);
+
       if (viewId) {
         const element = document.getElementById(viewId);
-        if (element) element.style.display = "block";
+        if (element) {
+          element.style.display = "block";
+          console.log("Element displayed:", element);
+
+          // Update diff stats if diff view is selected
+          if (this.comparisonMode === "diff") {
+            console.log("Updating diff stats...");
+            this.updateDiffStats();
+          }
+        } else {
+          console.error("Element not found:", viewId);
+        }
       }
+    } else {
+      console.log(
+        "Conditions not met - currentMode:",
+        this.currentMode,
+        "comparisonMode:",
+        this.comparisonMode
+      );
     }
+  }
+
+  updateDiffStats() {
+    console.log("updateDiffStats called");
+
+    const diffStatsElement = document.getElementById("diffStats");
+    console.log("diffStatsElement:", diffStatsElement);
+    console.log("pixelDifference:", this.pixelDifference);
+
+    if (!diffStatsElement || !this.pixelDifference) {
+      console.log("Early return - missing element or data");
+      return;
+    }
+
+    let statsHTML = "";
+
+    if (this.pixelDifference.error) {
+      statsHTML = `<p style="color: #dc3545;">${this.pixelDifference.error}</p>`;
+    } else {
+      const percentage = this.pixelDifference.percentage || 0;
+      const differentPixels = this.pixelDifference.differentPixels || 0;
+      const totalPixels = this.pixelDifference.totalPixels || 0;
+
+      let colorClass = "excellent";
+      let statusText = "Nearly Identical";
+
+      if (percentage > 10) {
+        colorClass = "needs-attention";
+        statusText = "Significantly Different";
+      } else if (percentage > 2) {
+        colorClass = "good";
+        statusText = "Some Differences";
+      }
+
+      statsHTML = `
+        <div class="metric ${colorClass}">
+          <label>Difference Percentage:</label>
+          <span>${percentage.toFixed(2)}%</span>
+        </div>
+        <div class="metric">
+          <label>Different Pixels:</label>
+          <span>${differentPixels.toLocaleString()} / ${totalPixels.toLocaleString()}</span>
+        </div>
+        <div class="metric ${colorClass}">
+          <label>Status:</label>
+          <span>${statusText}</span>
+        </div>
+        ${
+          this.pixelDifference.samplingFactor > 1
+            ? `<p style="font-size: 0.9rem; color: #6c757d; margin-top: 10px;">
+            <em>Note: Analysis used ${this.pixelDifference.samplingFactor}x sampling for performance</em>
+          </p>`
+            : ""
+        }
+      `;
+    }
+
+    console.log("Setting innerHTML:", statsHTML);
+    diffStatsElement.innerHTML = statsHTML;
   }
 
   displayEnhancedResults() {
@@ -1736,8 +2061,8 @@ class EnhancedDesignComparator {
     if (existingResults) existingResults.remove();
 
     // Reset comparison mode
-    document.querySelector('input[value="sideBySide"]').checked = true;
-    this.comparisonMode = "sideBySide";
+    document.querySelector('input[value="diff"]').checked = true;
+    this.comparisonMode = "diff";
 
     // Scroll to top
     window.scrollTo({ top: 0, behavior: "smooth" });

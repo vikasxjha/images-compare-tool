@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Debug Test</title>
+</head>
+<body>
+    <h1>Canvas Debug Test</h1>
+    
+    <div>
+        <p>Canvas A: <canvas id="canvasA" width="300" height="200" style="border: 1px solid red;"></canvas></p>
+        <p>Canvas B: <canvas id="canvasB" width="300" height="200" style="border: 1px solid blue;"></canvas></p>
+        <p>Canvas Diff: <canvas id="canvasDiff" width="300" height="200" style="border: 1px solid green;"></canvas></p>
+    </div>
+    
+    <button onclick="testCanvases()">Test Canvas Access</button>
+    <div id="results"></div>
+    
+    <script>
+        function testCanvases() {
+            const canvasA = document.getElementById("canvasA");
+            const canvasB = document.getElementById("canvasB");
+            const canvasDiff = document.getElementById("canvasDiff");
+            
+            const results = document.getElementById("results");
+            
+            results.innerHTML = `
+                <p>Canvas A: ${canvasA ? 'Found' : 'Not found'}</p>
+                <p>Canvas B: ${canvasB ? 'Found' : 'Not found'}</p>
+                <p>Canvas Diff: ${canvasDiff ? 'Found' : 'Not found'}</p>
+            `;
+            
+            if (canvasA && canvasB && canvasDiff) {
+                // Draw simple test patterns
+                const ctxA = canvasA.getContext('2d');
+                const ctxB = canvasB.getContext('2d');
+                const ctxDiff = canvasDiff.getContext('2d');
+                
+                // Canvas A - red rectangle
+                ctxA.fillStyle = 'red';
+                ctxA.fillRect(50, 50, 100, 100);
+                
+                // Canvas B - blue rectangle (slightly different position)
+                ctxB.fillStyle = 'blue';
+                ctxB.fillRect(60, 60, 100, 100);
+                
+                // Create simple difference visualization
+                ctxDiff.fillStyle = 'yellow';
+                ctxDiff.fillRect(50, 50, 110, 110);
+                ctxDiff.fillStyle = 'red';
+                ctxDiff.fillRect(55, 55, 10, 10);
+                
+                results.innerHTML += '<p>Test patterns drawn successfully!</p>';
+            }
+        }
+    </script>
+</body>
+</html>
