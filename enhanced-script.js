@@ -504,7 +504,14 @@ class EnhancedDesignComparator {
 
     if (!canvas1 || !canvas2 || !diffCanvas) {
       console.error("Canvas elements not found");
-      console.log("Canvas1:", canvas1, "Canvas2:", canvas2, "DiffCanvas:", diffCanvas);
+      console.log(
+        "Canvas1:",
+        canvas1,
+        "Canvas2:",
+        canvas2,
+        "DiffCanvas:",
+        diffCanvas
+      );
       return;
     }
 
