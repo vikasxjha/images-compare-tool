@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Enhanced Design Comparison Tool</title>
+    <link rel="stylesheet" href="styles.css" />
+    <!-- External Libraries -->
+    <script src="https://unpkg.com/tesseract.js@v5.0.0/dist/tesseract.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/css-tree@2.3.1/dist/csstree.min.js"></script>
+  </head>
+  <body>
+    <div class="container">
+      <header>
+        <h1>Enhanced Design Comparison Tool</h1>
+        <p>
+          Compare images, CSS code, websites, and design tokens with advanced
+          semantic analysis
+        </p>
+      </header>
+
+      <main>
+        <!-- Upload Mode Selection -->
+        <section class="upload-mode-section">
+          <div class="upload-modes">
+            <label class="upload-mode active">
+              <input type="radio" name="uploadMode" value="image" checked />
+              <span>📷 Images</span>
+            </label>
+            <label class="upload-mode">
+              <input type="radio" name="uploadMode" value="css" />
+              <span>🎨 CSS Code</span>
+            </label>
+            <label class="upload-mode">
+              <input type="radio" name="uploadMode" value="url" />
+              <span>🌐 Websites</span>
+            </label>
+            <label class="upload-mode">
+              <input type="radio" name="uploadMode" value="html" />
+              <span>📄 HTML</span>
+            </label>
+          </div>
+        </section>
+
+        <!-- Image Upload Section -->
+        <section class="upload-section" id="imageUploadSection">
+          <div class="upload-container">
+            <div class="upload-box" id="uploadA">
+              <div class="upload-area" data-target="imageA">
+                <div class="upload-icon">📁</div>
+                <p>Drop Image A here or</p>
+                <button type="button" class="upload-btn">Choose File</button>
+                <input type="file" id="imageA" accept="image/*" hidden />
+              </div>
+              <div class="image-preview" id="previewA" style="display: none">
+                <img id="imgA" alt="Image A" />
+                <button class="remove-btn" data-target="imageA">✕</button>
+              </div>
+            </div>
+
+            <div class="upload-box" id="uploadB">
+              <div class="upload-area" data-target="imageB">
+                <div class="upload-icon">📁</div>
+                <p>Drop Image B here or</p>
+                <button type="button" class="upload-btn">Choose File</button>
+                <input type="file" id="imageB" accept="image/*" hidden />
+              </div>
+              <div class="image-preview" id="previewB" style="display: none">
+                <img id="imgB" alt="Image B" />
+                <button class="remove-btn" data-target="imageB">✕</button>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- CSS Code Upload Section -->
+        <section
+          class="upload-section"
+          id="cssUploadSection"
+          style="display: none"
+        >
+          <div class="upload-container">
+            <div class="upload-box">
+              <div class="code-upload-area">
+                <label class="code-upload-label" for="cssCodeA"
+                  >CSS Code A</label
+                >
+                <textarea
+                  id="cssCodeA"
+                  placeholder="Paste your CSS code here..."
+                ></textarea>
+              </div>
+            </div>
+            <div class="upload-box">
+              <div class="code-upload-area">
+                <label class="code-upload-label" for="cssCodeB"
+                  >CSS Code B</label
+                >
+                <textarea
+                  id="cssCodeB"
+                  placeholder="Paste your CSS code here..."
+                ></textarea>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- URL Upload Section -->
+        <section
+          class="upload-section"
+          id="urlUploadSection"
+          style="display: none"
+        >
+          <div class="upload-container">
+            <div class="upload-box">
+              <div class="code-upload-area">
+                <label class="code-upload-label" for="urlA">Website A</label>
+                <input
+                  type="url"
+                  id="urlA"
+                  class="url-input"
+                  placeholder="https://example.com"
+                />
+                <button
+                  type="button"
+                  class="analyze-url-btn"
+                  data-target="urlA"
+                >
+                  Analyze Website
+                </button>
+              </div>
+            </div>
+            <div class="upload-box">
+              <div class="code-upload-area">
+                <label class="code-upload-label" for="urlB">Website B</label>
+                <input
+                  type="url"
+                  id="urlB"
+                  class="url-input"
+                  placeholder="https://example.com"
+                />
+                <button
+                  type="button"
+                  class="analyze-url-btn"
+                  data-target="urlB"
+                >
+                  Analyze Website
+                </button>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- HTML Upload Section -->
+        <section
+          class="upload-section"
+          id="htmlUploadSection"
+          style="display: none"
+        >
+          <div class="upload-container">
+            <div class="upload-box">
+              <div class="code-upload-area">
+                <label class="code-upload-label" for="htmlCodeA"
+                  >HTML Code A</label
+                >
+                <textarea
+                  id="htmlCodeA"
+                  placeholder="Paste your HTML code here..."
+                ></textarea>
+              </div>
+            </div>
+            <div class="upload-box">
+              <div class="code-upload-area">
+                <label class="code-upload-label" for="htmlCodeB"
+                  >HTML Code B</label
+                >
+                <textarea
+                  id="htmlCodeB"
+                  placeholder="Paste your HTML code here..."
+                ></textarea>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Comparison Controls -->
+        <!-- Comparison Controls -->
+        <section
+          class="controls-section"
+          id="controlsSection"
+          style="display: none"
+        >
+          <div class="controls">
+            <button id="compareBtn" class="btn primary">Start Analysis</button>
+            <button id="resetBtn" class="btn secondary">Reset</button>
+          </div>
+
+          <div class="comparison-modes">
+            <label class="mode-option">
+              <input
+                type="radio"
+                name="comparisonMode"
+                value="sideBySide"
+                checked
+              />
+              <span>Side by Side</span>
+            </label>
+            <label class="mode-option">
+              <input type="radio" name="comparisonMode" value="slider" />
+              <span>Slider Overlay</span>
+            </label>
+            <label class="mode-option">
+              <input type="radio" name="comparisonMode" value="diff" />
+              <span>Show Differences</span>
+            </label>
+            <label class="mode-option">
+              <input type="radio" name="comparisonMode" value="enhanced" />
+              <span>Enhanced Analysis</span>
+            </label>
+          </div>
+        </section>
+        <!-- Comparison Display -->
+        <section
+          class="comparison-section"
+          id="comparisonSection"
+          style="display: none"
+        >
+          <!-- Side by Side View -->
+          <div class="side-by-side" id="sideBySideView">
+            <div class="comparison-panel">
+              <h3>Image A</h3>
+              <div class="image-container">
+                <canvas id="canvasA"></canvas>
+              </div>
+            </div>
+            <div class="comparison-panel">
+              <h3>Image B</h3>
+              <div class="image-container">
+                <canvas id="canvasB"></canvas>
+              </div>
+            </div>
+          </div>
+
+          <!-- Slider Overlay View -->
+          <div class="slider-overlay" id="sliderView" style="display: none">
+            <div class="slider-container">
+              <canvas id="canvasSlider"></canvas>
+              <div class="slider-divider" id="sliderDivider"></div>
+              <input
+                type="range"
+                id="slider"
+                min="0"
+                max="100"
+                value="50"
+                class="comparison-slider"
+              />
+            </div>
+          </div>
+
+          <!-- Diff View -->
+          <div class="diff-view" id="diffView" style="display: none">
+            <div class="diff-panel">
+              <h3>Differences Highlighted</h3>
+              <div class="image-container">
+                <canvas id="canvasDiff"></canvas>
+              </div>
+              <div class="diff-stats" id="diffStats"></div>
+            </div>
+          </div>
+        </section>
+      </main>
+
+      <footer>
+        <p>
+          Drag and drop images or click to upload • Supports JPG, PNG, GIF
+          formats
+        </p>
+      </footer>
+    </div>
+
+    <script src="enhanced-script.js"></script>
+  </body>
+</html>
