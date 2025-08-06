@@ -105,6 +105,14 @@ class EnhancedDesignComparator {
         });
       });
 
+    // Slider control
+    const slider = document.getElementById("slider");
+    if (slider) {
+      slider.addEventListener("input", (e) => {
+        this.updateSliderView(e.target.value);
+      });
+    }
+
     // Upload buttons
     document.querySelectorAll(".upload-btn").forEach((btn) => {
       btn.addEventListener("click", (e) => {
@@ -1494,6 +1502,12 @@ class EnhancedDesignComparator {
             console.log("Updating diff stats...");
             this.updateDiffStats();
           }
+
+          // Setup slider if slider view is selected
+          if (this.comparisonMode === "slider") {
+            console.log("Setting up slider view...");
+            this.setupSliderView();
+          }
         } else {
           console.error("Element not found:", viewId);
         }
@@ -1565,6 +1579,79 @@ class EnhancedDesignComparator {
 
     console.log("Setting innerHTML:", statsHTML);
     diffStatsElement.innerHTML = statsHTML;
+  }
+
+  setupSliderView() {
+    console.log("setupSliderView called");
+
+    if (!this.canvasA || !this.canvasB || !this.canvasSlider) {
+      console.error("Canvas elements not available for slider view");
+      return;
+    }
+
+    const ctxSlider = this.canvasSlider.getContext("2d");
+    const ctxA = this.canvasA.getContext("2d");
+    const ctxB = this.canvasB.getContext("2d");
+
+    if (!ctxSlider || !ctxA || !ctxB) {
+      console.error("Cannot get canvas contexts for slider");
+      return;
+    }
+
+    // Set slider canvas dimensions to match other canvases
+    this.canvasSlider.width = this.canvasA.width;
+    this.canvasSlider.height = this.canvasA.height;
+
+    // Initially show the blend at 50%
+    this.updateSliderView(50);
+
+    console.log("Slider view setup complete");
+  }
+
+  updateSliderView(value) {
+    if (!this.canvasA || !this.canvasB || !this.canvasSlider) {
+      return;
+    }
+
+    const ctxSlider = this.canvasSlider.getContext("2d");
+    const ctxA = this.canvasA.getContext("2d");
+    const ctxB = this.canvasB.getContext("2d");
+
+    if (!ctxSlider || !ctxA || !ctxB) {
+      return;
+    }
+
+    const width = this.canvasSlider.width;
+    const height = this.canvasSlider.height;
+
+    // Clear the slider canvas
+    ctxSlider.clearRect(0, 0, width, height);
+
+    // Calculate the split position based on slider value (0-100)
+    const splitPosition = (value / 100) * width;
+
+    // Draw image A on the left side
+    const imageDataA = ctxA.getImageData(0, 0, width, height);
+    ctxSlider.putImageData(imageDataA, 0, 0);
+
+    // Draw image B on the right side (clipped)
+    if (splitPosition < width) {
+      const imageDataB = ctxB.getImageData(
+        splitPosition,
+        0,
+        width - splitPosition,
+        height
+      );
+      ctxSlider.putImageData(imageDataB, splitPosition, 0);
+    }
+
+    // Update the slider divider position
+    const sliderDivider = document.getElementById("sliderDivider");
+    if (sliderDivider) {
+      sliderDivider.style.left = `${value}%`;
+    }
+
+    console.log(`Slider updated to ${value}%`);
   }
 
   displayEnhancedResults() {

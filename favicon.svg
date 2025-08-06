@@ -1,0 +1,22 @@
+<svg width="32" height="32" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
+  <!-- Blue section (left) -->
+  <rect x="2" y="6" width="12" height="20" rx="2" fill="#2196F3"/>
+  
+  <!-- Yellow section (right) -->
+  <rect x="18" y="6" width="12" height="20" rx="2" fill="#FFC107"/>
+  
+  <!-- Divider line -->
+  <rect x="14" y="4" width="4" height="24" fill="#fff" opacity="0.9"/>
+  
+  <!-- Blue circle (sun/moon) -->
+  <circle cx="8" cy="12" r="2" fill="#FFC107"/>
+  
+  <!-- Yellow circle (sun/moon) -->
+  <circle cx="24" cy="12" r="2" fill="#fff"/>
+  
+  <!-- Mountain/wave pattern in blue section -->
+  <path d="M2 16 L6 14 L8 15 L12 13 L14 14 L14 26 L2 26 Z" fill="#fff" opacity="0.3"/>
+  
+  <!-- Mountain/wave pattern in yellow section -->
+  <path d="M18 15 L22 13 L24 14 L28 12 L30 13 L30 26 L18 26 Z" fill="#fff" opacity="0.4"/>
+</svg>
